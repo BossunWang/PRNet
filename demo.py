@@ -30,101 +30,111 @@ def main(args):
     if not os.path.exists(save_folder):
         os.mkdir(save_folder)
 
-    types = ('*.jpg', '*.png')
-    image_path_list= []
-    for files in types:
-        image_path_list.extend(glob(os.path.join(image_folder, files)))
-    total_num = len(image_path_list)
+    # types = ('*.jpg', '*.png')
+    # image_path_list= []
+    # for files in types:
+    #     image_path_list.extend(glob(os.path.join(image_folder, files)))
+    # total_num = len(image_path_list)
 
-    for i, image_path in enumerate(image_path_list):
+    for dir, dirs, files in os.walk(image_folder):
+        for file in files:
+            image_path = os.path.join(dir, file)
+            dir = dir.replace("\\", "/")
+            new_dir = dir.replace(image_folder, save_folder)
+            if not os.path.isdir(new_dir):
+                os.mkdir(new_dir)
 
-        name = image_path.strip().split('/')[-1][:-4]
+            print(image_path)
+            name = image_path.replace(image_folder, save_folder)
+            print(name)
 
-        # read image
-        image = imread(image_path)
-        [h, w, c] = image.shape
-        if c>3:
-            image = image[:,:,:3]
+            # read image
+            image = imread(image_path)
+            [h, w, c] = image.shape
+            if c>3:
+                image = image[:,:,:3]
 
-        # the core: regress position map
-        if args.isDlib:
-            max_size = max(image.shape[0], image.shape[1])
-            if max_size> 1000:
-                image = rescale(image, 1000./max_size)
-                image = (image*255).astype(np.uint8)
-            pos = prn.process(image) # use dlib to detect face
-        else:
-            if image.shape[0] == image.shape[1]:
-                image = resize(image, (256,256))
-                pos = prn.net_forward(image/255.) # input image has been cropped to 256x256
+            # the core: regress position map
+            if args.isDlib:
+                max_size = max(image.shape[0], image.shape[1])
+                if max_size> 1000:
+                    image = rescale(image, 1000./max_size)
+                    image = (image*255).astype(np.uint8)
+                pos = prn.process(image) # use dlib to detect face
             else:
+                # if image.shape[0] == image.shape[1]:
+                #     image = resize(image, (256,256))
+                #     pos = prn.net_forward(image/255.) # input image has been cropped to 256x256
+                # else:
                 box = np.array([0, image.shape[1]-1, 0, image.shape[0]-1]) # cropped with bounding box
                 pos = prn.process(image, box)
-        
-        image = image/255.
-        if pos is None:
-            continue
 
-        if args.is3d or args.isMat or args.isPose or args.isShow:
-            # 3D vertices
-            vertices = prn.get_vertices(pos)
-            if args.isFront:
-                save_vertices = frontalize(vertices)
-            else:
-                save_vertices = vertices.copy()
-            save_vertices[:,1] = h - 1 - save_vertices[:,1]
+            image = image/255.
+            if pos is None:
+                continue
 
-        if args.isImage:
-            imsave(os.path.join(save_folder, name + '.jpg'), image)
-
-        if args.is3d:
-            # corresponding colors
-            colors = prn.get_colors(image, vertices)
-
-            if args.isTexture:
-                if args.texture_size != 256:
-                    pos_interpolated = resize(pos, (args.texture_size, args.texture_size), preserve_range = True)
+            if args.is3d or args.isMat or args.isPose or args.isShow:
+                # 3D vertices
+                vertices = prn.get_vertices(pos)
+                if args.isFront:
+                    save_vertices = frontalize(vertices)
                 else:
-                    pos_interpolated = pos.copy()
-                texture = cv2.remap(image, pos_interpolated[:,:,:2].astype(np.float32), None, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT,borderValue=(0))
-                if args.isMask:
-                    vertices_vis = get_visibility(vertices, prn.triangles, h, w)
-                    uv_mask = get_uv_mask(vertices_vis, prn.triangles, prn.uv_coords, h, w, prn.resolution_op)
-                    uv_mask = resize(uv_mask, (args.texture_size, args.texture_size), preserve_range = True)
-                    texture = texture*uv_mask[:,:,np.newaxis]
-                write_obj_with_texture(os.path.join(save_folder, name + '.obj'), save_vertices, prn.triangles, texture, prn.uv_coords/prn.resolution_op)#save 3d face with texture(can open with meshlab)
-            else:
-                write_obj_with_colors(os.path.join(save_folder, name + '.obj'), save_vertices, prn.triangles, colors) #save 3d face(can open with meshlab)
+                    save_vertices = vertices.copy()
+                save_vertices[:,1] = h - 1 - save_vertices[:,1]
 
-        if args.isDepth:
-            depth_image = get_depth_image(vertices, prn.triangles, h, w, True)
-            depth = get_depth_image(vertices, prn.triangles, h, w)
-            imsave(os.path.join(save_folder, name + '_depth.jpg'), depth_image)
-            sio.savemat(os.path.join(save_folder, name + '_depth.mat'), {'depth':depth})
+            if args.isImage:
+                imsave(name, image)
 
-        if args.isMat:
-            sio.savemat(os.path.join(save_folder, name + '_mesh.mat'), {'vertices': vertices, 'colors': colors, 'triangles': prn.triangles})
+            if args.is3d:
+                # corresponding colors
+                colors = prn.get_colors(image, vertices)
 
-        if args.isKpt or args.isShow:
-            # get landmarks
-            kpt = prn.get_landmarks(pos)
-            np.savetxt(os.path.join(save_folder, name + '_kpt.txt'), kpt)
+                if args.isTexture:
+                    if args.texture_size != 256:
+                        pos_interpolated = resize(pos, (args.texture_size, args.texture_size), preserve_range = True)
+                    else:
+                        pos_interpolated = pos.copy()
+                    texture = cv2.remap(image, pos_interpolated[:,:,:2].astype(np.float32), None, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT,borderValue=(0))
+                    if args.isMask:
+                        vertices_vis = get_visibility(vertices, prn.triangles, h, w)
+                        uv_mask = get_uv_mask(vertices_vis, prn.triangles, prn.uv_coords, h, w, prn.resolution_op)
+                        uv_mask = resize(uv_mask, (args.texture_size, args.texture_size), preserve_range = True)
+                        texture = texture*uv_mask[:,:,np.newaxis]
+                    write_obj_with_texture(name.replace('.jpg', '.obj'), save_vertices, prn.triangles, texture, prn.uv_coords/prn.resolution_op)#save 3d face with texture(can open with meshlab)
+                else:
+                    write_obj_with_colors(name.replace('.jpg', '.obj'), save_vertices, prn.triangles, colors) #save 3d face(can open with meshlab)
 
-        if args.isPose or args.isShow:
-            # estimate pose
-            camera_matrix, pose = estimate_pose(vertices)
-            np.savetxt(os.path.join(save_folder, name + '_pose.txt'), pose) 
-            np.savetxt(os.path.join(save_folder, name + '_camera_matrix.txt'), camera_matrix) 
+            if args.isDepth:
+                depth_image = get_depth_image(vertices, prn.triangles, h, w, True)
+                depth = get_depth_image(vertices, prn.triangles, h, w)
+                imsave(os.path.join(name.replace('.jpg', '_depth.jpg')), depth_image)
+                sio.savemat(name.replace('.jpg', '_depth.mat'), {'depth': depth})
 
-            np.savetxt(os.path.join(save_folder, name + '_pose.txt'), pose)
+            if args.isMat:
+                sio.savemat(name.replace('.jpg', '_mesh.mat'),
+                            {'vertices': vertices, 'colors': colors, 'triangles': prn.triangles})
 
-        if args.isShow:
-            # ---------- Plot
-            image_pose = plot_pose_box(image, camera_matrix, kpt)
-            cv2.imshow('sparse alignment', plot_kpt(image, kpt))
-            cv2.imshow('dense alignment', plot_vertices(image, vertices))
-            cv2.imshow('pose', plot_pose_box(image, camera_matrix, kpt))
-            cv2.waitKey(0)
+            if args.isKpt or args.isShow:
+                # get landmarks
+                kpt = prn.get_landmarks(pos)
+                np.savetxt(name.replace('.jpg', '_kpt.txt'), kpt)
+
+            if args.isPose or args.isShow:
+                # estimate pose
+                camera_matrix, pose = estimate_pose(vertices)
+
+                np.savetxt(name.replace('.jpg', '_pose.txt'), pose)
+                np.savetxt(name.replace('.jpg', '_camera_matrix.txt'), camera_matrix)
+
+                np.savetxt(name.replace('.jpg', '_pose.txt'), pose)
+
+            if args.isShow:
+                # ---------- Plot
+                image_pose = plot_pose_box(image, camera_matrix, kpt)
+                cv2.imshow('sparse alignment', plot_kpt(image, kpt))
+                cv2.imshow('dense alignment', plot_vertices(image, vertices))
+                cv2.imshow('pose', plot_pose_box(image, camera_matrix, kpt))
+                cv2.waitKey(0)
 
 
 if __name__ == '__main__':
