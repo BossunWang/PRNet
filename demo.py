@@ -14,6 +14,7 @@ from utils.estimate_pose import estimate_pose
 from utils.rotate_vertices import frontalize
 from utils.render_app import get_visibility, get_uv_mask, get_depth_image
 from utils.write import write_obj_with_colors, write_obj_with_texture
+from render import render_scene, save_image 
 
 def main(args):
     if args.isShow or args.isTexture:
@@ -36,7 +37,7 @@ def main(args):
     #     image_path_list.extend(glob(os.path.join(image_folder, files)))
     # total_num = len(image_path_list)
 
-    for dir, dirs, files in os.walk(image_folder):
+    for dir, dirs, files in sorted(os.walk(image_folder)):
         for file in files:
             image_path = os.path.join(dir, file)
             dir = dir.replace("\\", "/")
@@ -44,9 +45,8 @@ def main(args):
             if not os.path.isdir(new_dir):
                 os.mkdir(new_dir)
 
-            print(image_path)
             name = image_path.replace(image_folder, save_folder)
-            print(name)
+            print('data path:', name)
 
             # read image
             image = imread(image_path)
@@ -103,6 +103,27 @@ def main(args):
                     write_obj_with_texture(name.replace('.jpg', '.obj'), save_vertices, prn.triangles, texture, prn.uv_coords/prn.resolution_op)#save 3d face with texture(can open with meshlab)
                 else:
                     write_obj_with_colors(name.replace('.jpg', '.obj'), save_vertices, prn.triangles, colors) #save 3d face(can open with meshlab)
+                
+                filepath = name.replace('.jpg', '.obj')
+                filepath = filepath.replace("\\", "/")
+                print('filepath:', filepath)
+                new_dir = dir.replace(args.inputDir, args.renderDir)
+                # print(new_dir + '/' + file)
+                if not os.path.isdir(new_dir):
+                    os.mkdir(new_dir)
+
+                color_image1, _ = render_scene(filepath, 4.0, 0.0, 1.0)
+                color_image2, _ = render_scene(filepath, 4.0, np.pi / 9.0, 1.0)
+
+                if color_image1 or color_image2 is None:
+                    continue
+
+                new_path = filepath.replace(args.outputDir, args.renderDir)
+                # print('new_path:', new_path)
+                save_image(new_path, '_40_', color_image1)
+                save_image(new_path, '_60_', color_image2)
+
+                os.remove(name.replace('.jpg', '.obj'))
 
             if args.isDepth:
                 depth_image = get_depth_image(vertices, prn.triangles, h, w, True)
@@ -144,6 +165,8 @@ if __name__ == '__main__':
                         help='path to the input directory, where input images are stored.')
     parser.add_argument('-o', '--outputDir', default='TestImages/results', type=str,
                         help='path to the output directory, where results(obj,txt files) will be stored.')
+    parser.add_argument('-r', '--renderDir', default='TestImages/results', type=str,
+                        help='path to the render directory, where results(jpg files) will be stored.')
     parser.add_argument('--gpu', default='0', type=str,
                         help='set gpu id, -1 for CPU')
     parser.add_argument('--isDlib', default=True, type=ast.literal_eval,

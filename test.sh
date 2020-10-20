@@ -1,1 +1,1 @@
-python3 demo.py -i ../face_dataset/RMFD/self-built-masked-face-recognition-dataset/AFDB_face_dataset -o objects --gpu -1 --isPose False --isFront True --isDlib False
+python demo.py -i ../face_dataset/ms1m_align_112 -o ../face_dataset/ms1m_align_112_objects -r ../face_dataset/ms1m_align_112_pose --texture_size 112 --gpu -1 --isPose False --isFront True --isDlib True
