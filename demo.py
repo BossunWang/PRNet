@@ -104,26 +104,26 @@ def main(args):
                 else:
                     write_obj_with_colors(name.replace('.jpg', '.obj'), save_vertices, prn.triangles, colors) #save 3d face(can open with meshlab)
                 
-                filepath = name.replace('.jpg', '.obj')
-                filepath = filepath.replace("\\", "/")
-                print('filepath:', filepath)
-                new_dir = dir.replace(args.inputDir, args.renderDir)
-                # print(new_dir + '/' + file)
-                if not os.path.isdir(new_dir):
-                    os.mkdir(new_dir)
+                # filepath = name.replace('.jpg', '.obj')
+                # filepath = filepath.replace("\\", "/")
+                # print('filepath:', filepath)
+                # new_dir = dir.replace(args.inputDir, args.renderDir)
+                # # print(new_dir + '/' + file)
+                # if not os.path.isdir(new_dir):
+                #     os.mkdir(new_dir)
 
-                color_image1, _ = render_scene(filepath, 4.0, 0.0, 1.0)
-                color_image2, _ = render_scene(filepath, 4.0, np.pi / 9.0, 1.0)
+                # color_image1, _ = render_scene(filepath, 4.0, 0.0, 3.0)
+                # color_image2, _ = render_scene(filepath, 4.0, np.pi / 9.0, 3.0)
 
-                if color_image1 or color_image2 is None:
-                    continue
+                # if color_image1 is None or color_image2 is None:
+                #     continue
 
-                new_path = filepath.replace(args.outputDir, args.renderDir)
-                # print('new_path:', new_path)
-                save_image(new_path, '_40_', color_image1)
-                save_image(new_path, '_60_', color_image2)
+                # new_path = filepath.replace(args.outputDir, args.renderDir)
+                # # print('new_path:', new_path)
+                # save_image(new_path, '_40_', color_image1)
+                # save_image(new_path, '_60_', color_image2)
 
-                os.remove(name.replace('.jpg', '.obj'))
+                # os.remove(name.replace('.jpg', '.obj'))
 
             if args.isDepth:
                 depth_image = get_depth_image(vertices, prn.triangles, h, w, True)

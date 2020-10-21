@@ -1,1 +1,1 @@
-python demo.py -i ../face_dataset/ms1m_align_112 -o ../face_dataset/ms1m_align_112_objects -r ../face_dataset/ms1m_align_112_pose --texture_size 112 --gpu -1 --isPose False --isFront True --isDlib True
+python3 demo.py -i ../face_dataset/ms1m_align_112 -o ../face_dataset/ms1m_align_112_objects -r ../face_dataset/ms1m_align_112_pose --texture_size 112 --gpu 5 --isPose False --isFront True --isDlib True

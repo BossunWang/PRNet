@@ -1,16 +1,16 @@
 import trimesh
+import os
+os.environ["PYOPENGL_PLATFORM"] = "osmesa"
 import pyrender
 import numpy as np
 import time
 import cv2
-import os
 import tqdm
 import copy
 from pyrender.constants import (OPEN_GL_MAJOR, OPEN_GL_MINOR, TEXT_PADDING, DEFAULT_SCENE_SCALE,
                         DEFAULT_Z_FAR, DEFAULT_Z_NEAR, RenderFlags, TextAlign)
 from pyrender.camera import PerspectiveCamera, OrthographicCamera
 from pyrender.trackball import Trackball
-
 
 def compute_initial_camera_pose(scene):
     centroid = scene.centroid
@@ -36,7 +36,7 @@ def render_scene(filepath, scale_value, rotate_radius, light_intensity):
     fuze_trimesh = trimesh.load(filepath)
     mesh = pyrender.Mesh.from_trimesh(fuze_trimesh)
 
-    scene = pyrender.Scene(bg_color=(0, 0, 0), ambient_light=[1., 1., 1.])
+    scene = pyrender.Scene(bg_color=(0, 0, 0))
     scene.add(mesh)
 
     pose = compute_initial_camera_pose(scene)
